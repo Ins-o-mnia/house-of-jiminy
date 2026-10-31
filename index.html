@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>House of Jiminy</title>
+<meta name="description" content="House of Jiminy: small worlds, made with a good conscience.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,900&family=Fragment+Mono&family=Instrument+Serif:ital@1&display=swap">
+<style>
+/* Layout: one full-bleed WebGL field with the word inside the shader; four quiet corners frame it. */
+:root {
+  --night: #05071c;
+  --ultramarine: #2335c9;
+  --coral: #ff5a3c;
+  --paper: #f6efe9;
+  --ink: rgba(246, 239, 233, .94);
+  --ink-dim: rgba(246, 239, 233, .66);
+  --glass: rgba(5, 7, 28, .26);
+  --glass-line: rgba(246, 239, 233, .24);
+  --script: "Sour Gummy", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --mono: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+/* Frost is a light look: the frame switches to dark ink. */
+:root.tone-light {
+  --ink: rgba(12, 14, 44, .9); --ink-dim: rgba(12, 14, 44, .62);
+  --glass: rgba(255, 255, 255, .42); --glass-line: rgba(12, 14, 44, .16);
+  --paper: #0c0e2c; --night: #f4f3f8;
+}
+.tone-light .frame { text-shadow: none; }
+.label, .tagline, .cta, .sound, .looks button { transition: color .4s, background .4s, border-color .4s; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night); color: var(--ink); }
+#field { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+.frame {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding-top: calc(env(safe-area-inset-top, 0px) + clamp(16px, 3vh, 32px));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3vh, 32px));
+  padding-left: max(clamp(16px, 3vw, 44px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(16px, 3vw, 44px), env(safe-area-inset-right, 0px));
+  pointer-events: none;
+  text-shadow: 0 1px 14px rgba(5, 7, 28, .45);
+}
+.row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; }
+.row.top { align-items: flex-start; }
+.looks {
+  display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--glass-line);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+}
+.looks button {
+  font: inherit; font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-dim); background: transparent; border: 0; border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  transition: color .3s, background .3s;
+}
+.looks button:hover { color: var(--ink); }
+.looks button[aria-pressed="true"] { background: var(--paper); color: var(--night); text-shadow: none; }
+.no-gl .looks { display: none; }
+.row.top .label { flex: 1 1 0; }
+.side { display: grid; gap: 14px; justify-items: end; min-width: 0; max-width: 100%; }
+.looks { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.looks::-webkit-scrollbar { display: none; }
+.looks button { flex-shrink: 0; }
+.row > * { pointer-events: auto; min-width: 0; }
+
+.label { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim); line-height: 1.6; }
+.label b { font-weight: 400; color: var(--ink); }
+.label .by { color: inherit; text-decoration: none; border-bottom: 1px solid transparent; transition: color .3s, border-color .3s; }
+.label .by:hover { color: var(--ink); border-bottom-color: currentColor; }
+
+.sound {
+  flex-shrink: 0; white-space: nowrap;
+  font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink); background: var(--glass); border: 1px solid var(--glass-line); border-radius: 999px;
+  padding: 9px 14px 9px 12px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  transition: background .3s, border-color .3s;
+}
+.sound:hover { background: rgba(246, 239, 233, .1); border-color: rgba(246, 239, 233, .45); }
+.bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 10px; }
+.bars i { width: 2px; height: 3px; background: currentColor; border-radius: 1px; transition: height .2s; }
+.sound[aria-pressed="true"] .bars i { animation: bar .55s ease-in-out infinite alternate; }
+.sound[aria-pressed="true"] .bars i:nth-child(2) { animation-delay: .12s; }
+.sound[aria-pressed="true"] .bars i:nth-child(3) { animation-delay: .24s; }
+@keyframes bar { from { height: 3px; } to { height: 10px; } }
+/* Until the first click the button breathes in the cricket's rhythm and a small hint says how to hear it. */
+.sound { position: relative; }
+.sound .hint {
+  position: absolute; top: calc(100% + 10px); right: 2px; white-space: nowrap;
+  font-size: 10px; letter-spacing: .16em; color: var(--ink-dim);
+  opacity: 0; transition: opacity .6s; pointer-events: none;
+}
+.sound.waiting .hint { opacity: 1; transition-delay: 1.2s; }
+.sound.waiting { animation: wait-chirp 1.25s ease-in-out infinite; }
+@keyframes wait-chirp {
+  0%, 30%, 100% { border-color: var(--glass-line); box-shadow: 0 0 0 0 rgba(246, 239, 233, 0); }
+  8%, 22% { border-color: rgba(246, 239, 233, .7); box-shadow: 0 0 18px 0 rgba(246, 239, 233, .18); }
+}
+@media (prefers-reduced-motion: reduce) { .sound.waiting { animation: none; } }
+
+.lede { display: grid; gap: 16px; justify-items: start; }
+.tagline {
+  margin: 0; font-family: var(--serif); font-style: italic; font-weight: 400;
+  font-size: clamp(19px, 2.1vw, 26px); line-height: 1.18; max-width: 20ch; text-wrap: balance; color: var(--ink);
+}
+.cta {
+  display: inline-flex; align-items: baseline; gap: 14px;
+  padding: 11px 18px 12px 16px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--glass-line); color: var(--paper); text-decoration: none;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+  transition: background .3s, border-color .3s;
+}
+.cta .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim); }
+.cta .name { font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1; }
+.cta .arrow { width: 26px; height: 26px; align-self: center; margin: -4px -4px -4px 2px; transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
+.cta:hover { background: rgba(246, 239, 233, .12); border-color: rgba(246, 239, 233, .5); }
+.cta:hover .arrow { transform: translate(3px, -3px) scale(1.06); }
+.cta .soon { display: none; }
+.cta.is-soon .soon { display: inline; }
+.cta.is-soon .arrow { display: none; }
+
+.readout { text-align: right; font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+
+.houseof {
+  /* "House of", still and small above the moving word; its height is set from the word's measured top. */
+  position: fixed; left: 0; right: 0; top: 30%; transform: translateY(calc(-100% - 2.6vh));
+  text-align: center; pointer-events: none;
+  font-family: var(--mono); font-size: clamp(12px, 1.35vw, 18px); letter-spacing: .55em; text-indent: .55em;
+  text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 14px rgba(5, 7, 28, .45);
+}
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Without WebGL the word still stands, set in the same hand over a still gradient. */
+.still { display: none; }
+.no-gl #field { display: none; }
+.no-gl .still {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background:
+    radial-gradient(60% 70% at 50% 100%, rgba(255, 90, 60, .85), transparent 70%),
+    radial-gradient(70% 60% at 20% 10%, rgba(35, 53, 201, .9), transparent 70%),
+    var(--night);
+  font-family: var(--script); font-weight: 900; font-size: min(26vw, 50vh); color: var(--paper);
+  text-shadow: 0 0 40px rgba(255, 140, 90, .6);
+}
+
+@media (max-width: 560px) {
+  .side { justify-items: start; width: 100%; }
+  .looks:not(.types) { order: 3; width: 100%; }
+  .looks button { padding: 7px 8px; }
+  .readout { text-align: left; }
+  .row.bottom { align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="houseof" id="houseof" aria-hidden="true">House of</div>
+<div class="still" aria-hidden="true">JIMINY</div>
+
+<main class="frame">
+  <h1 class="sr-only">House of Jiminy</h1>
+  <div class="row top">
+    <div class="label"><b>House of Jiminy</b><br>Est.&nbsp;2026<br><a class="by" href="https://paulsvoboda.de" target="_blank" rel="noopener">by&nbsp;Paul&nbsp;Svoboda&nbsp;↗</a></div>
+    <button class="sound waiting" id="sound" type="button" aria-pressed="true">
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span id="sound-label">Sound on</span>
+      <span class="hint" aria-hidden="true">Tap anywhere for sound</span>
+    </button>
+  </div>
+  <div class="row bottom">
+    <div class="lede">
+      <p class="tagline">Small worlds, made with a good conscience.</p>
+      <a class="cta" id="cta" href="#" target="_blank" rel="noopener">
+        <span class="kicker">First project</span>
+        <span class="name">Tiny Crowns</span>
+        <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 18.5 18.5 5.5M9 5.5h9.5V15" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="kicker soon">Soon</span>
+      </a>
+    </div>
+    <div class="side">
+    <div class="label readout" aria-live="off">
+      <span id="rate">54 chirps / min</span><br>
+      <span id="temp">≈ 12.0 °C by Dolbear’s law</span>
+    </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  // Where the button leads. Put the Tiny Crowns address here once it exists.
+  const TINY_CROWNS_URL = '#';
+  const WORD = 'JIMINY';
+  // Faces for the word, to try side by side. The first one opens.
+  const TYPES = [
+    { id: 'fraunces', css: 'italic 900 {size}px "Fraunces", Georgia, serif' },
+    { id: 'instrument', css: 'italic 400 {size}px "Instrument Serif", Georgia, serif' },
+    { id: 'syne', css: '800 {size}px "Syne", system-ui, sans-serif' },
+    { id: 'unbounded', css: '900 {size}px "Unbounded", system-ui, sans-serif' },
+    { id: 'bricolage', css: '800 {size}px "Bricolage Grotesque", system-ui, sans-serif' },
+    { id: 'gummy', css: '900 {size}px "Sour Gummy", ui-rounded, system-ui, sans-serif' },
+  ];
+  let type = TYPES[0];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  setupLink();
+  const sound = setupSound();
+  // The looks, in shader order. The page opens on the one named in the link (#beam, #drift, #rings, #glass, #prism, #tiles, #frost).
+  const LOOKS = ['glass', 'beam', 'drift', 'rings', 'prism', 'tiles', 'frost'];
+  const look = { mode: 1, next: -1, fade: 1 };
+  setupLooks();
+
+  const canvas = document.getElementById('field');
+  const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+  if (!gl) { document.documentElement.classList.add('no-gl'); return; }
+
+  const VS = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
+  const FS = `
+precision highp float;
+uniform vec2 uRes;
+uniform float uTime, uChirp, uSince, uLoop, uMouseOn, uBoil, uMode, uFade;
+uniform vec2 uMouse, uWave;
+uniform vec2 uTrail[8];
+uniform sampler2D uText;
+
+float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+float noise(vec2 p){
+  vec2 i=floor(p), f=fract(p), u=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1.,0.)),u.x), mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),u.x), u.y);
+}
+float fbm(vec2 p){
+  float v=0., a=.5; mat2 m=mat2(1.6,1.2,-1.2,1.6);
+  for(int i=0;i<5;i++){ v+=a*noise(p); p=m*p+3.1; a*=.5; }
+  return v;
+}
+// night -> ultramarine -> ice blue -> blush -> coral -> marigold
+vec3 ramp(float x){
+  x=clamp(x,0.,1.)*5.;
+  vec3 c=mix(vec3(.015,.02,.09), vec3(.08,.12,.62), clamp(x,0.,1.));
+  c=mix(c, vec3(.16,.55,.96), clamp(x-1.,0.,1.));
+  c=mix(c, vec3(.96,.76,.84), clamp(x-2.,0.,1.));
+  c=mix(c, vec3(1.,.36,.24), clamp(x-3.,0.,1.));
+  c=mix(c, vec3(1.,.62,.2), clamp(x-4.,0.,1.));
+  return c;
+}
+// ink black -> deep sea -> ocean -> ice -> blush -> coral, a little quieter than the glass ramp
+vec3 seaRamp(float h){
+  h=clamp(h,0.,1.)*5.;
+  vec3 c=mix(vec3(.004,.008,.03), vec3(.02,.08,.28), clamp(h,0.,1.));
+  c=mix(c, vec3(.05,.38,.66), clamp(h-1.,0.,1.));
+  c=mix(c, vec3(.52,.78,.86), clamp(h-2.,0.,1.));
+  c=mix(c, vec3(.9,.72,.74), clamp(h-3.,0.,1.));
+  c=mix(c, vec3(.93,.34,.3), clamp(h-4.,0.,1.));
+  return c;
+}
+// One fine line every ~5 pixels, whatever the screen.
+float lines(float d){ return sin(d*uRes.y*1.25); }
+
+// Fine dust: one soft point per grid cell (cell in pixels), the grid drifting at vel cells a second.
+float dust(vec2 fc, vec2 vel, float cell, float dens, float seed){
+  vec2 q=fc/cell-vel*uTime;
+  vec2 id=floor(q), f=fract(q);
+  float h=hash(id+seed);
+  if(h>dens) return 0.;
+  vec2 pos=vec2(hash(id+seed+1.3), hash(id+seed+7.1))*.6+.2;
+  float d=length(f-pos)*cell;
+  float tw=.55+.45*sin(uTime*(1.+3.*h)+h*40.);
+  return smoothstep(1.5,.2,d)*tw;
+}
+// Pixel blocks: whole cells light up and blink, each column at its own speed.
+float pixels(vec2 fc, float cell, float speed, float dens, float seed){
+  float c=floor(fc.x/cell);
+  float sp=speed*(.4+hash(vec2(c,seed)));
+  vec2 id=floor(vec2(fc.x/cell, fc.y/cell-sp*uTime));
+  float h=hash(id+seed);
+  return step(1.-dens,h)*step(.3,fract(h*13.+uTime*(.25+h)));
+}
+// How close p is to the pointer or the tail it drags behind it.
+float trailMask(vec2 p, float tight){
+  float m=0.;
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 d=p-uTrail[i];
+    m=max(m, exp(-dot(d,d)*mix(38.,12.,fi/7.)*tight)*(1.-fi/9.));
+  }
+  return m*uMouseOn;
+}
+vec2 ringCenter(float t, float L){ return vec2(.22*sin(L)+.05*sin(t*.2), -.66+.05*sin(t*.13)); }
+
+// paper fog -> lilac -> ultramarine -> coral -> marigold, for the light glass
+vec3 frostRamp(float x){
+  x=clamp(x,0.,1.)*4.;
+  vec3 c=mix(vec3(.94,.94,.97), vec3(.8,.79,.95), clamp(x,0.,1.));
+  c=mix(c, vec3(.24,.32,.92), clamp(x-1.,0.,1.));
+  c=mix(c, vec3(1.,.45,.33), clamp(x-2.,0.,1.));
+  c=mix(c, vec3(1.,.64,.3), clamp(x-3.,0.,1.));
+  return c;
+}
+
+// Glass over a boiling field, in four cuts: g 0 reeds, 1 prism (slanted reeds that split the light),
+// 2 tiles (square glass blocks), 3 frost (pale fog, fine reeds).
+vec3 glass(vec2 p, float t, float L, float wave, float rr, float g, out vec2 refr, out float column){
+  float isPrism=1.-step(.5,abs(g-1.)), isTiles=1.-step(.5,abs(g-2.)), isFrost=1.-step(.5,abs(g-3.));
+  vec2 dm=p-uMouse;
+  float near=exp(-dot(dm,dm)*7.)*uMouseOn;
+  float k=.016+.016*uChirp+.05*wave+.05*near;
+  float bend=.05*sin(p.y*2.3+t*.17)+.03*sin(p.y*5.1-t*.23+L);
+  float f, edge;
+  if(isTiles>.5){
+    vec2 cell=(p+vec2(t*.012,-t*.008)+.01*wave*sin(rr*30.))*13.;
+    vec2 fv=fract(cell)-.5;
+    f=fv.x;
+    edge=max(abs(fv.x),abs(fv.y));
+    refr=fv*k*1.8*(1.+.4*hash(floor(cell)));
+  } else {
+    float a=isPrism*(.55+.12*sin(t*.07+L));
+    vec2 pr=vec2(cos(a)*p.x-sin(a)*p.y, sin(a)*p.x+cos(a)*p.y);
+    float n=mix(38.,mix(28.,64.,isFrost),max(isPrism,isFrost));
+    float rx=(pr.x+bend*(1.-.4*isPrism)+.012*wave*sin(rr*40.))*n;
+    f=fract(rx)-.5;
+    edge=abs(f);
+    float kk=k*mix(1.,mix(1.5,.7,isFrost),max(isPrism,isFrost));
+    vec2 o=vec2(f*kk, -f*f*kk*.6);
+    refr=vec2(cos(a)*o.x+sin(a)*o.y, -sin(a)*o.x+cos(a)*o.y);
+  }
+  vec2 q=p+refr;
+  float T=t*.045;
+  vec2 fp=q*1.15;
+  vec2 w=vec2(fbm(fp*1.2+vec2(T,-T*.6)), fbm(fp*1.2+vec2(-T*.7,T)+5.2));
+  float field=fbm(fp*.85+1.9*w+vec2(.3*sin(L),-t*.025));
+  column=exp(-pow(q.x*1.6+.15*sin(q.y*2.+t*.2),2.))*smoothstep(.75,-.55,q.y);
+  float x=field*1.05-.2+column*.5-q.y*.42+.16*sin(L+q.x*.8)+.05*uChirp;
+  vec3 col;
+  if(isFrost>.5){
+    col=frostRamp(x*.85-.32+.25*column);
+    col*=.97+.05*(1.-edge*2.);
+    col+=vec3(1.)*.06*smoothstep(.38,.5,f);
+    return col;
+  }
+  if(isPrism>.5){
+    float sp=.14*f+.03*uChirp*f;
+    col=vec3(ramp(x+sp).r, ramp(x).g, ramp(x-sp).b);
+  } else col=ramp(x);
+  if(isTiles>.5) col*=.92+.16*hash(floor((p+vec2(t*.012,-t*.008))*13.));
+  float vio=smoothstep(.5,.78,fbm(fp*1.7+w*1.3+9.));
+  col=mix(col, vec3(.52,.22,.92), vio*.38);
+  col*=.9+.12*(1.-edge*2.);
+  col+=vec3(.9,.95,1.)*.05*smoothstep(.38,.5,mix(f,edge,isTiles))*(.5+column)*(1.+isTiles*1.5);
+  return col;
+}
+
+// 1 Beam: a column of light rising out of the dark, behind fine vertical grooves.
+vec3 beam(vec2 p, float asp, float t, float L, out vec2 refr){
+  float sway=.07*sin(p.y*1.6+t*.25)+.06*sin(t*.17+L);
+  float s=lines(p.x+sway*.25+t*.0015);
+  refr=vec2(s*.0032*(1.+uChirp),0.);
+  vec2 q=p+refr;
+  float yb=.5-q.y;
+  // On a narrow screen the beam narrows with it.
+  float xs=.45+.55*min(asp,1.);
+  float x=(q.x+sway)/xs;
+  float wdt=(.09+.3*yb*yb+.025*uChirp+.015*sin(L)+.04*sin(t*.3))*(.5+.5*min(asp,1.));
+  float core=exp(-pow(x/wdt,2.));
+  float side=exp(-pow((abs(x)-(.4+.07*sin(t*.23))*min(asp,1.5)/xs)/(.1+.12*yb),2.));
+  float rise=smoothstep(-.1,1.,yb);
+  float h=core*(.3+.8*rise)+side*(.18+.42*rise)+rise*.1;
+  h*=.9+.18*uChirp;
+  vec3 col=seaRamp(h);
+  float mid=smoothstep(.12,.4,h)*smoothstep(1.05,.55,h);
+  return col*(1.+.11*s*mid);
+}
+
+// 2 Drift: a dark diagonal current between cold and warm light, fine arcs fanned over it.
+vec3 drift(vec2 p, float asp, float t, float L, out vec2 refr){
+  vec2 c1=vec2(1.25*asp,-1.15), c2=vec2(-1.1*asp,1.25);
+  float d1=length(p-c1), d2=length(p-c2);
+  float s1=lines(d1+t*.002), s2=lines(d2-t*.0016);
+  float m1=smoothstep(-.35,.45,p.x-p.y*.8), m2=1.-smoothstep(-.6,.1,p.x-p.y*.8);
+  vec2 off=normalize(p-c1)*s1*m1*.0034+normalize(p-c2)*s2*m2*.0034;
+  off*=1.+uChirp;
+  refr=off;
+  vec2 q=p+off;
+  float a=.4+.18*sin(L)+.06*sin(t*.09);
+  vec2 dir=normalize(vec2(sin(a),cos(a)));
+  vec2 nrm=vec2(dir.y,-dir.x);
+  float u=dot(q,nrm)-.05-.16*sin(t*.11);
+  float v=dot(q,dir);
+  vec3 cool=mix(vec3(.05,.24,.6), vec3(.42,.8,.93), smoothstep(-.15,-.7,u)*.85+.12*sin(v*2.+t*.1));
+  vec2 pk=q-vec2(-.22*asp+.12*sin(t*.13),.36+.08*cos(t*.1));
+  cool=mix(cool, vec3(.97,.82,.7), .55*exp(-dot(pk,pk)*7.));
+  vec3 warm=mix(vec3(.93,.45,.18), vec3(.95,.58,.56), smoothstep(.1,-.55,v));
+  warm=mix(vec3(.62,.1,.14), warm, smoothstep(.04,.38,u));
+  warm=mix(warm, vec3(.45,.82,.95), .6*exp(-dot(q-vec2(.5*asp,.12),q-vec2(.5*asp,.12))*6.));
+  vec3 col=mix(cool, warm, smoothstep(-.06,.22,u));
+  col=mix(col, vec3(.01,.025,.1), .92*exp(-pow(u/.17,2.)));
+  col=mix(col, vec3(.01,.025,.1), .55*smoothstep(-.1,-.9,u+v*.45));
+  col=mix(vec3(dot(col,vec3(.3,.5,.2))), col, 1.25);
+  col*=.95+.14*uChirp;
+  return max(col,0.)*(1.+.08*(s1*m1+s2*m2));
+}
+
+// 3 Rings: every chirp leaves a ring of sound in fine concentric grooves.
+vec3 rings(vec2 p, float asp, float t, float L, out vec2 refr){
+  vec2 c=ringCenter(t,L);
+  vec2 d=(p-c)*vec2(.82,1.);
+  float r=length(d);
+  float s=lines(r-t*.004);
+  float ring=exp(-pow((r-uSince*.85)*5.,2.))*exp(-uSince*1.1);
+  vec2 off=normalize(d+.0001)*s*.003*(1.+3.*ring);
+  refr=off;
+  float r2=length((p+off-c)*vec2(.82,1.));
+  float h=1.12-r2*1.02+.14*sin(r2*4.-t*.6+L)+.3*ring;
+  vec3 col=seaRamp(h*.95);
+  col=mix(col, vec3(.98,.55,.25), smoothstep(.85,1.1,h)*.6);
+  return col*(1.+.09*s*smoothstep(.06,.4,h)*smoothstep(1.2,.7,h));
+}
+
+void main(){
+  vec2 fc=gl_FragCoord.xy;
+  vec2 uv=fc/uRes;
+  float asp=uRes.x/uRes.y;
+  vec2 p=(uv-.5)*vec2(asp,1.);
+  float t=uTime, L=uLoop;
+  float rr=length((p-uWave)*vec2(.8,1.3));
+  float wave=exp(-pow((rr-uSince*.75)*6.,2.))*exp(-uSince*1.3);
+
+  vec2 refr=vec2(0.);
+  float column=0.;
+  vec3 col;
+  if(uMode<.5) col=glass(p,t,L,wave,rr,0.,refr,column);
+  else if(uMode>3.5) col=glass(p,t,L,wave,rr,uMode-3.,refr,column);
+  else if(uMode<1.5) col=beam(p,asp,t,L,refr);
+  else if(uMode<2.5) col=drift(p,asp,t,L,refr);
+  else col=rings(p,asp,t,L,refr);
+  // The glass family: Glass, Prism, Tiles, Frost. Frost is the light one with dark ink.
+  float glassy=1.-step(.5,uMode)+step(3.5,uMode);
+  float fr=step(5.5,uMode), tl=step(4.5,uMode)*(1.-fr);
+
+  // The quiet looks move slower and wobble less.
+  float calm=mix(.8,1.,glassy);
+
+  // The word: breathes, wobbles like jelly, and takes the grooves of whatever glass it sits behind.
+  float bs=floor(t*9.);
+  vec2 boil=(vec2(hash(vec2(bs,1.)),hash(vec2(bs,7.)))-.5)*.0028*uBoil*glassy;
+  float breathe=1.+.012*sin(t*.42);
+  vec2 jelly=vec2(breathe*(1.+.03*uChirp*calm), breathe*(1.-.04*uChirp*calm+.015*sin(t*1.3*calm)));
+  vec2 tuv=(uv-.5)/jelly+.5;
+  // On a tall screen the word is short, so the wave shrinks with it.
+  float wob=(1.+1.6*uChirp)*min(1.,asp)*calm;
+  float tw=t*calm;
+  tuv+=vec2((.007*sin(tuv.y*9.+tw*1.1+L)+.004*sin(tuv.y*23.-tw*1.9))*calm,
+            (.022*sin(tuv.x*7.5-tw*1.4)+.007*sin(tuv.x*19.+tw*2.3))*wob);
+  tuv+=boil;
+  vec2 tr=vec2(refr.x/asp, refr.y)*mix(1.,1.8*min(1.,asp*asp),glassy)*(1.-.65*tl);
+  float into=mix(.22,.08,glassy);
+  float split=mix(.5,1.,glassy);
+  float cr=texture2D(uText, tuv+tr*into).r;
+  float cg=texture2D(uText, tuv+tr*into*1.6+vec2(.0012*split,0.)).r;
+  float cb=texture2D(uText, tuv+tr*into*2.2+vec2(.0024*split,0.)).r;
+  vec3 core=vec3(cr,cg,cb);
+  vec3 halo=texture2D(uText, tuv+tr*.3).rgb;
+
+  float warm=.5+.5*sin(L+p.y*2.2-p.x*.6);
+  vec3 glowCol=mix(vec3(.25,.45,1.), vec3(1.,.42,.2), warm);
+  // A soft dark aura keeps the white letters readable on the bright parts; each chirp lights it up.
+  col*=1.-mix(.38,.5,glassy)*halo.g*(1.-fr);
+  col+=glowCol*halo.g*mix(.3,.6,glassy)*uChirp*(1.-fr);
+  col+=mix(vec3(.35,.2,.85), vec3(1.,.5,.35), warm)*halo.b*mix(.12+.2*uChirp,.3+.4*uChirp,glassy)*(1.-fr);
+  // In the fog the word bleeds colour instead of light.
+  col=mix(col, mix(vec3(.18,.28,.95), vec3(1.,.42,.2), warm), fr*clamp(halo.b*(1.05+.4*uChirp)+halo.g*.3,0.,1.));
+
+  // Sparks rise off a small glow at the pointer, a little like fire: hot and dense at the source,
+  // licking sideways, cooler and thinner as they climb.
+  float pm=0., heat=0.;
+  for(int k=0;k<8;k++){
+    float fk=float(k);
+    vec2 lick=vec2(.006*fk*sin(fk*1.3+t*3.1+p.y*9.), .026*fk);
+    float m=trailMask(p-lick, 10.)*(1.-fk/8.);
+    if(m>pm){ pm=m; heat=1.-fk/8.; }
+  }
+  if(pm>.003){
+    float cell=max(3.,uRes.y/140.);
+    float px=pixels(fc, cell, 3.6, .7*pm, 3.);
+    float fine=dust(fc, vec2(.05,9.), 6., .55*pm, 1.)*.8;
+    vec3 hot=mix(vec3(1.,.55,.3), vec3(1.,.93,.82), smoothstep(.6,1.,heat));
+    vec3 pc=mix(vec3(.5,.62,1.), hot, smoothstep(.15,.7,heat));
+    float soft=step(1.5,uMode)*step(uMode,3.5)+fr;
+    float amt=clamp((px*mix(1.,.6,soft)+fine)*(.45+.55*heat),0.,1.);
+    col=mix(col+pc*amt, mix(col, pc*vec3(.35,.4,.7), amt), fr);
+  }
+
+  // Ink, light falloff, grain.
+  vec3 ink=mix(vec3(1.,.99,.97), vec3(1.,.95,.92), warm)*(1.+.12*uChirp*calm);
+  ink=mix(ink, vec3(.04,.05,.17)+glowCol*.1*uChirp, fr);
+  col=col*(1.-core)+ink*core;
+  float v=smoothstep(1.3,.25,length(p*vec2(.8,1.)));
+  col*=mix(mix(.72,.6,glassy)+mix(.28,.4,glassy)*v, .9+.1*v, fr);
+  col+=(hash(fc+fract(t*7.)*100.)-.5)*mix(.03,.045,glassy);
+  gl_FragColor=vec4(col*uFade,1.);
+}`;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  const prog = gl.createProgram();
+  try {
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  } catch (e) {
+    console.error(e);
+    document.documentElement.classList.add('no-gl');
+    return;
+  }
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const aLoc = gl.getAttribLocation(prog, 'a');
+  gl.enableVertexAttribArray(aLoc);
+  gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+
+  const U = {};
+  ['uRes', 'uTime', 'uChirp', 'uSince', 'uLoop', 'uMouseOn', 'uBoil', 'uMode', 'uFade', 'uMouse', 'uWave', 'uTrail', 'uText']
+    .forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.uniform1i(U.uText, 0);
+
+  // The word as a texture: red = the ink, green = a close glow, blue = a wide glow.
+  const tc = document.createElement('canvas');
+  const tx = tc.getContext('2d');
+  // The hand-lettered Jiminy as vector paths, from jiminy-logo-white.svg (viewBox and the group's matrix as exported).
+  const LOGO = { vb: [0.0, 0.0, 958.0, 470.0], m: [0.02496, 0.0, 0.0, -0.02496, -152.6171, 668.682953], paths: ["M13828,22951C13879,23032 14426.66,23979.638 13992.085,24805.043C13448.511,25388.191 12401,24754 12240,24667C12163,24625 11823,24456 11775,24435C11753,24425 11714,24409 11688,24399C11661,24388 11619,24371 11593,24361C11352,24264 11132,24195 10810,24114C10774,24105 10725,24093 10700,24088C10675,24083 10635,24073 10610,24065C10434,24014 9879,23908 9610,23876C9547,23868 9410,23848 9305,23832C9201,23816 9041,23793 8950,23781C8711,23750 8340,23667 8170,23608C8123,23592 8066,23572 8044,23565C8021,23558 7994,23547 7984,23542C7973,23536 7943,23522 7915,23510C7653,23396 7378,23241 7248,23134C6842,22800 6603,22243 6649,21736C6660,21608 6681,21473 6699,21418C6704,21400 6722,21342 6739,21290C6790,21127 6910,20878 6989,20770C7190,20497 7338,20376 7620,20255C7915,20128 8112,20092 8392,20116C8541,20128 8738,20159 8803,20179C8821,20185 8884,20204 8944,20221C9366,20344 9736,20565 10090,20905C10159,20972 10268,21073 10333,21130C10398,21188 10486,21266 10528,21304C10978,21706 11334,21944 11710,22094C11746,22109 11783,22125 11792,22130C11833,22153 11846,22129 11824,22068C11807,22018 11766,21721 11750,21535C11745,21464 11735,21358 11729,21300C11714,21156 11714,20562 11728,20425C11735,20365 11747,20233 11755,20133C11763,20033 11774,19929 11779,19903C11785,19877 11791,19821 11795,19780C11798,19739 11807,19669 11815,19625C11822,19581 11840,19469 11855,19375C11869,19282 11885,19185 11891,19160C11897,19135 11908,19079 11915,19035C11923,18991 11936,18924 11945,18885C11958,18821 11977,18730 12010,18565C12036,18436 12068,18295 12096,18190C12104,18160 12117,18101 12126,18060C12134,18019 12151,17942 12162,17890C12251,17469 12303,17067 12330,16605C12335,16512 12349,16289 12361,16110C12383,15772 12382,15741 12350,15375C12300,14813 12135,14275 11914,13959C11743,13713 11656,13620 11511,13522C11373,13430 11323,13409 11099,13346C10813,13265 10508,13334 10285,13529C10084,13704 9954,13910 9908,14125C9882,14241 9872,14567 9890,14650C9928,14818 10031,15065 10124,15209C10257,15414 10286,15462 10342,15568C10610,16080 10660,16245 10660,16619C10660,16862 10618,17028 10495,17287C10200,17905 9600,18211 8842,18130C8302,18072 7697,17661 7307,17088C7250,17005 7080,16717 7080,16705C7080,16702 7064,16668 7044,16628C7002,16541 6932,16378 6919,16333C6914,16315 6903,16288 6895,16273C6887,16258 6880,16239 6880,16233C6880,16226 6863,16176 6841,16123C6792,15999 6735,15823 6715,15734C6674,15549 6640,15377 6630,15300C6624,15254 6617,15213 6615,15210C6613,15207 6607,15160 6601,15105C6594,15050 6585,14983 6580,14955C6564,14871 6530,14356 6530,14200C6530,14049 6562,13652 6578,13609C6583,13596 6590,13560 6594,13530C6598,13500 6621,13399 6645,13305C6768,12824 6774,12808 6922,12500C7038,12260 7080,12169 7080,12157C7080,12117 7298,11763 7394,11645C7492,11526 7756,11242 7904,11097C8255,10753 8706,10451 8955,10396C8988,10388 9092,10359 9185,10330C9279,10301 9414,10260 9485,10238C9557,10217 9642,10191 9675,10180C9708,10170 9778,10150 9830,10135C9882,10121 9936,10104 9950,10099C10101,10043 10466,10025 10655,10065C10727,10080 10788,10094 10792,10096C10815,10111 11011,10152 11093,10160C11529,10203 11756,10257 12065,10395C12253,10479 12492,10598 12562,10642C12591,10661 12622,10679 12630,10683C12649,10691 12718,10734 12908,10855C13350,11137 13815,11629 14040,12055C14064,12099 14097,12160 14114,12190C14170,12287 14247,12449 14306,12595C14341,12682 14349,12703 14404,12855C14460,13006 14559,13310 14585,13405C14599,13460 14615,13516 14620,13530C14625,13544 14641,13607 14655,13670C14669,13733 14689,13823 14700,13870C14776,14210 14823,14614 14824,14925C14825,15285 14777,15909 14744,15962C14742,15966 14735,16006 14729,16052C14724,16098 14711,16180 14700,16235C14690,16290 14671,16387 14660,16450C14636,16581 14607,16727 14580,16850C14569,16897 14554,16969 14545,17010C14496,17237 14390,17656 14320,17905C14302,17968 14292,18011 14245,18210C14238,18240 14220,18308 14206,18360C14191,18412 14168,18498 14154,18550C14140,18602 14122,18668 14115,18695C14080,18823 13998,19144 13981,19220C13963,19301 13944,19383 13901,19570C13855,19769 13804,20008 13795,20060C13791,20079 13783,20124 13775,20160C13731,20368 13681,20791 13675,21002C13653,21804 13657,21956 13715,22395C13724,22461 13742,22569 13757,22635C13771,22701 13788,22792 13796,22838C13803,22884 13817,22935 13828,22951Z", "M28675,24465C28304,24396 28236,24376 28074,24291C27397,23935 27194,23104 27627,22458C27737,22294 27968,22120 28157,22060C28194,22048 28250,22030 28280,22019C28503,21943 28949,21993 29226,22126C29505,22259 29619,22353 29781,22580C29956,22825 30049,23233 29999,23540C29936,23932 29562,24334 29159,24445C29038,24479 28801,24488 28675,24465Z", "M37645,23264C37525,23256 37391,23235 37347,23218C37321,23208 37291,23200 37282,23200C37254,23200 37021,23079 36956,23031C36617,22779 36436,22408 36470,22036C36503,21677 36598,21518 37033,21090C37536,20595 37656,20381 37755,19807C37800,19541 37795,18869 37745,18620C37742,18606 37733,18532 37725,18455C37717,18378 37704,18272 37696,18220C37681,18125 37657,17964 37620,17710C37610,17636 37598,17550 37595,17520C37591,17490 37581,17416 37572,17355C37550,17214 37548,16494 37569,16365C37576,16321 37586,16254 37591,16215C37706,15348 38107,14702 38729,14383C39148,14168 39508,14071 39840,14083C40382,14104 40811,14305 41298,14767C41406,14870 41455,14910 41467,14906C41481,14900 41482,14869 41477,14597C41468,14130 41401,13530 41320,13190C41308,13143 41291,13067 41280,13020C41193,12624 41010,12187 40799,11867C40777,11835 40760,11807 40760,11804C40760,11801 40736,11765 40708,11724C40679,11682 40642,11627 40626,11602C40490,11387 40299,11186 40030,10975C39815,10807 39785,10789 39515,10664C39436,10628 39261,10573 39148,10548C38993,10515 38655,10515 38525,10548C38252,10618 38033,10724 37902,10850C37801,10948 37637,11168 37643,11200C37646,11220 37722,11260 37784,11276C37980,11325 38308,11500 38505,11660C38967,12037 39108,12574 38872,13060C38644,13529 38161,13745 37561,13645C37078,13565 36538,13171 36264,12701C36188,12570 36189,12571 36103,12597C36014,12624 35711,12728 35685,12740C35674,12745 35629,12763 35585,12779C35541,12796 35469,12823 35425,12840C35381,12857 35300,12886 35245,12905C35106,12952 35060,12968 35020,12985C35001,12992 34956,13010 34920,13024C34884,13038 34794,13074 34720,13105C34646,13135 34581,13160 34576,13160C34569,13160 34513,13183 34325,13264C34065,13376 33404,13544 32940,13615C32287,13716 31418,13633 30930,13425C30581,13276 30475,13223 30341,13132C30312,13111 30278,13088 30266,13080C30044,12931 29744,12621 29554,12345C29494,12259 29348,11981 29317,11894C29239,11680 29231,11654 29189,11465C29103,11083 29136,10615 29267,10360C29274,10346 29280,10332 29280,10328C29280,10298 29452,10034 29558,9902C29761,9649 29969,9519 30330,9421C30827,9286 31318,9368 31688,9650C31857,9779 32086,10044 32279,10335C32408,10529 32543,10668 32738,10808C32812,10861 32899,10924 32932,10947C33086,11059 33274,11147 33495,11214C33757,11292 34194,11306 34770,11255C34861,11247 34967,11238 35005,11235C35197,11220 35584,11165 35680,11139C35790,11109 35788,11112 35821,10898C35848,10716 35858,10670 35906,10490C36066,9897 36420,9340 36865,8980C37051,8829 37248,8722 37525,8620C37558,8608 37596,8594 37610,8588C37624,8583 37676,8565 37725,8549C37775,8533 37835,8513 37860,8504C37909,8486 37905,8488 38100,8437C38547,8320 39149,8345 39655,8499C39819,8550 39888,8572 39920,8585C39939,8592 39987,8611 40025,8626C40266,8718 40746,8953 40950,9079C41216,9242 41615,9607 41859,9910C41879,9934 41921,9986 41953,10024C42015,10099 42235,10425 42327,10580C42522,10906 42619,11112 42825,11645C42879,11783 42941,11980 42986,12155C43042,12371 43057,12427 43064,12438C43072,12451 43108,12619 43126,12725C43133,12769 43148,12855 43160,12915C43197,13116 43240,13392 43280,13695C43291,13778 43302,13852 43305,13860C43309,13874 43319,13987 43356,14460C43367,14598 43374,14893 43380,15475C43384,15926 43393,16347 43399,16410C43405,16473 43414,16615 43420,16725C43437,17035 43470,17342 43514,17590C43562,17863 43569,17900 43605,18037C43663,18262 43678,18310 43791,18650C43930,19067 43981,19240 44009,19395C44098,19869 44099,20041 44018,20445C43959,20740 43791,21046 43599,21209C43536,21262 43397,21360 43384,21360C43381,21360 43366,21368 43352,21378C43183,21494 42788,21582 42515,21565C41980,21530 41508,21150 41310,20594C41100,20002 41070,19562 41176,18620C41217,18255 41219,17834 41180,17590C41144,17357 41111,17228 41035,17025C41021,16987 41003,16937 40996,16915C40838,16439 40280,16262 39951,16584C39847,16684 39786,16810 39707,17080C39619,17385 39618,17876 39706,18565C39720,18674 39733,18767 39736,18771C39740,18777 39767,18955 39790,19120C39796,19161 39807,19240 39816,19295C39824,19350 39835,19451 39840,19520C39845,19589 39857,19690 39865,19745C39903,19981 39894,20647 39850,20978C39764,21609 39528,22160 39164,22580C38847,22946 38347,23212 37905,23250C37710,23267 37697,23267 37645,23264ZM37945,12732C38056,12645 37998,12480 37825,12392C37732,12346 37530,12308 37489,12331C37432,12361 37567,12649 37667,12711C37757,12767 37888,12777 37945,12732Z", "M16290,22944C16254,22936 16203,22925 16175,22920C15707,22836 15359,22585 15133,22170C15117,22140 15098,22106 15093,22095C14947,21825 14982,21333 15170,21024C15355,20719 15624,20560 16036,20509C16274,20480 16501,20546 16860,20746C17115,20888 17122,20892 17214,20984C17491,21257 17611,21625 17561,22041C17527,22324 17406,22571 17251,22676C17231,22690 17186,22721 17150,22746C16923,22907 16523,22999 16290,22944Z", "M31646,21735C31531,21711 31499,21702 31375,21654C30941,21487 30662,21164 30594,20750C30556,20517 30597,20323 30802,19775C30871,19593 30890,19533 30931,19370C31250,18097 30657,16399 29880,16363C29628,16351 29521,16462 29429,16835C29377,17042 29378,17415 29430,17715C29441,17776 29457,17868 29466,17920C29482,18019 29506,18135 29535,18255C29554,18333 29574,18435 29595,18555C29602,18600 29615,18663 29624,18697C29633,18730 29640,18768 29640,18780C29640,18792 29649,18841 29660,18889C29706,19084 29720,19148 29729,19210C29735,19246 29751,19317 29764,19368C29886,19817 29909,20391 29815,20665C29667,21098 29352,21310 28854,21310C28613,21310 28351,21240 28111,21112C27706,20896 27481,20425 27545,19930C27644,19166 27652,18690 27575,18145C27567,18090 27549,17955 27535,17845C27521,17735 27495,17566 27479,17470C27463,17374 27446,17264 27441,17225C27436,17187 27425,17112 27416,17060C27347,16635 27336,16038 27391,15655C27552,14523 28362,13919 29407,14150C30018,14285 30556,14731 31006,15476C31025,15508 31037,15482 31044,15394C31076,14999 31339,14656 31691,14549C32184,14399 32677,14527 33067,14906C33188,15024 33256,15126 33333,15302C33407,15472 33426,15779 33380,16075C33374,16114 33363,16190 33355,16245C33347,16300 33334,16388 33326,16440C33318,16492 33302,16598 33290,16675C33278,16752 33265,16831 33260,16850C33255,16869 33246,16923 33240,16970C33234,17017 33223,17087 33215,17125C33167,17369 33173,17892 33227,18125C33384,18808 33758,19198 34160,19096C34190,19089 34233,19079 34255,19075C34348,19059 34494,18956 34557,18862C34718,18619 34747,17956 34616,17530C34608,17505 34600,17474 34597,17460C34595,17446 34578,17383 34560,17320C34514,17155 34490,17064 34474,16995C34435,16831 34408,16695 34395,16600C34388,16542 34377,16466 34371,16430C34301,15992 34287,15617 34329,15350C34358,15168 34379,15075 34422,14940C34565,14482 34925,14112 35355,13981C35637,13896 36002,13897 36275,13985C36344,14008 36509,14080 36542,14102C36556,14112 36571,14120 36575,14120C36617,14120 36855,14321 36932,14421C37254,14843 37234,15395 36881,15859C36851,15899 36837,15921 36750,16072C36522,16466 36451,16943 36536,17515C36544,17570 36555,17648 36560,17688C36565,17729 36574,17779 36580,17799C36585,17819 36594,17871 36600,17915C36606,17959 36617,18029 36625,18070C36632,18111 36648,18213 36660,18295C36672,18378 36688,18479 36695,18520C36830,19259 36745,19932 36440,20550C36252,20931 35798,21284 35330,21413C35086,21481 34659,21510 34465,21472C34432,21465 34370,21454 34327,21446C33817,21352 33337,20999 32961,20443C32938,20408 32913,20380 32905,20380C32887,20380 32888,20380 32860,20600C32848,20696 32831,20800 32823,20830C32814,20860 32802,20910 32795,20940C32661,21516 32188,21843 31646,21735Z", "M21835,21725C21294,21649 20922,21388 20574,20840C20507,20733 20480,20689 20480,20685C20480,20676 20377,20496 20361,20477C20344,20456 20330,20470 20330,20510C20330,20524 20314,20598 20294,20675C20274,20752 20253,20838 20245,20866C20195,21064 20057,21316 19931,21440C19564,21801 18869,21758 18441,21347C18164,21080 18061,20644 18185,20258C18240,20086 18277,20015 18434,19781C18498,19686 18570,19566 18594,19516C18671,19354 18816,18910 18835,18780C18839,18755 18848,18701 18856,18660C18978,18018 18916,17202 18697,16590C18530,16124 18215,15810 17915,15810C17674,15810 17555,15945 17471,16315C17437,16466 17428,16850 17455,17040C17463,17098 17475,17188 17480,17240C17486,17292 17495,17358 17501,17385C17507,17413 17518,17478 17526,17530C17533,17582 17546,17661 17555,17705C17563,17749 17569,17809 17570,17839C17570,17868 17577,17918 17585,17949C17593,17980 17604,18066 17609,18140C17627,18385 17641,18553 17656,18706C17722,19404 17510,19838 17038,19975C16924,20008 16656,20027 16531,20010C16340,19985 16166,19913 15923,19757C15579,19537 15378,19206 15350,18815C15337,18641 15353,18443 15391,18295C15441,18100 15459,18020 15471,17935C15483,17847 15513,17645 15535,17505C15582,17207 15584,16924 15540,16460C15507,16113 15485,15578 15499,15455C15505,15400 15515,15292 15521,15215C15527,15138 15533,15073 15535,15070C15537,15067 15546,15014 15554,14952C15602,14608 15763,14231 15950,14027C16112,13849 16463,13635 16660,13594C16696,13586 16750,13575 16780,13568C16816,13560 16913,13556 17055,13556C17348,13557 17524,13593 17775,13700C18169,13868 18420,14052 18686,14370C18754,14450 18961,14748 18971,14779C18981,14808 19008,14781 19047,14703C19211,14382 19433,14208 19754,14150C20164,14075 20563,14206 20856,14512C21095,14761 21165,14954 21164,15365C21164,15649 21168,15615 21071,16105C21055,16188 21032,16332 21020,16425C20998,16598 20993,16635 20959,16820C20949,16878 20933,16970 20925,17025C20917,17080 20905,17163 20898,17210C20860,17461 20885,18039 20946,18320C21081,18936 21410,19197 21755,18960C21955,18822 22054,18372 21986,17905C21977,17845 21965,17755 21960,17705C21954,17656 21943,17581 21935,17540C21927,17499 21913,17425 21904,17375C21882,17254 21876,17228 21842,17060C21783,16776 21765,16621 21765,16390C21766,15836 21968,15448 22344,15280C22569,15180 22824,15136 22990,15169C23241,15219 23304,15249 23483,15405C23620,15524 23798,15822 23845,16008C23852,16039 23865,16083 23872,16105C23888,16155 23888,16762 23871,16855C23865,16888 23852,16962 23841,17020C23770,17392 23743,17883 23783,18090C23910,18738 24252,19081 24606,18914C24731,18855 24790,18770 24849,18565C24868,18496 24880,18431 24901,18260C24929,18036 24907,17585 24856,17310C24848,17269 24839,17217 24836,17195C24827,17139 24801,16989 24783,16900C24775,16859 24762,16794 24754,16755C24747,16717 24732,16642 24720,16590C24709,16538 24691,16455 24681,16405C24641,16217 24620,16121 24591,15995C24575,15924 24559,15845 24556,15820C24549,15776 24542,15741 24501,15550C24429,15218 24410,15109 24381,14885C24313,14357 24298,14044 24320,13655C24355,13053 24510,12483 24739,12118C24761,12083 24800,12019 24826,11975C25059,11577 25391,11283 25851,11066C26377,10817 27038,10810 27529,11048C27613,11088 27629,11099 27745,11184C27836,11252 27916,11318 28008,11405C28346,11722 28520,12357 28380,12763C28369,12794 28360,12825 28360,12831C28360,12844 28327,12919 28293,12985C28194,13175 28015,13344 27736,13512C27692,13539 27655,13560 27653,13560C27648,13560 27473,13658 27380,13713C27122,13867 26849,14164 26723,14430C26418,15072 26371,15746 26545,17000C26553,17058 26567,17161 26575,17230C26605,17471 26610,17506 26625,17575C26658,17727 26693,17934 26735,18220C26792,18604 26794,19317 26739,19593C26729,19647 26720,19703 26720,19717C26720,19731 26711,19774 26700,19813C26688,19853 26668,19926 26654,19975C26486,20564 26214,20906 25744,21116C25454,21246 24977,21289 24700,21211C24637,21194 24560,21172 24530,21164C24500,21155 24471,21145 24465,21140C24460,21136 24424,21120 24385,21105C24319,21078 24255,21046 24183,21004C24166,20993 24128,20971 24098,20954C23920,20849 23772,20706 23631,20503C23575,20423 23540,20420 23540,20495C23540,20589 23392,20923 23269,21105C23038,21449 22575,21699 22125,21725C22070,21728 22003,21732 21975,21734C21948,21736 21885,21732 21835,21725Z"] };
+  const logoPaths = typeof Path2D === 'function' ? LOGO.paths.map(d => new Path2D(d)) : null;
+  function drawWord(W, H) {
+    tc.width = W; tc.height = H;
+    tx.globalCompositeOperation = 'source-over';
+    tx.fillStyle = '#000';
+    tx.fillRect(0, 0, W, H);
+    if (!logoPaths) return drawText(W, H);
+    const [vx, vy, vw, vh] = LOGO.vb;
+    let w = W * (W > H ? .74 : .9), h = w * vh / vw;
+    if (h > H * .5) { h = H * .5; w = h * vw / vh; }
+    const s = w / vw, ox = (W - w) / 2, oy = H * .5 - h / 2;
+    document.getElementById('houseof').style.top = (oy / H * 100).toFixed(2) + '%';
+    const fs = h;
+    // Paint the logo in device pixels, shifted sideways by dx (for the shadow-only glow passes).
+    const paint = (dx) => {
+      const [a, b, c, d, e, f] = LOGO.m;
+      tx.setTransform(s * a, s * b, s * c, s * d, ox + s * (e - vx) + dx, oy + s * (f - vy));
+      for (const p of logoPaths) tx.fill(p);
+      tx.setTransform(1, 0, 0, 1, 0, 0);
+    };
+    tx.globalCompositeOperation = 'lighter';
+    const off = W * 3;
+    const glow = (blur, color) => {
+      tx.save();
+      tx.shadowColor = color; tx.shadowBlur = blur; tx.shadowOffsetX = off;
+      tx.fillStyle = '#fff';
+      paint(-off);
+      tx.restore();
+    };
+    glow(fs * .05, 'rgb(0,255,0)');
+    glow(fs * .05, 'rgb(0,255,0)');
+    glow(fs * .2, 'rgb(0,0,255)');
+    glow(fs * .2, 'rgb(0,0,255)');
+    tx.fillStyle = 'rgb(255,0,0)';
+    paint(0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, tc);
+  }
+  // Fallback for browsers without Path2D: the word set in the typeface.
+  function drawText(W, H) {
+    tx.textBaseline = 'alphabetic';
+    let fs = H * .5;
+    tx.font = type.css.replace('{size}', fs);
+    let m = tx.measureText(WORD);
+    const wide = (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || m.width);
+    fs *= (W * (W > H ? .86 : .9)) / wide;
+    fs = Math.min(fs, H * .72);
+    tx.font = type.css.replace('{size}', fs);
+    m = tx.measureText(WORD);
+    const left = m.actualBoundingBoxLeft || 0, right = m.actualBoundingBoxRight || m.width;
+    const asc = m.actualBoundingBoxAscent || fs * .7, desc = m.actualBoundingBoxDescent || fs * .2;
+    const x = W / 2 + (left - right) / 2;
+    const y = H * .5 + (asc - desc) / 2;
+    document.getElementById('houseof').style.top = ((y - asc) / H * 100).toFixed(2) + '%';
+
+    tx.globalCompositeOperation = 'lighter';
+    const off = W * 3;
+    const glow = (blur, color) => {
+      tx.save();
+      tx.shadowColor = color; tx.shadowBlur = blur; tx.shadowOffsetX = off;
+      tx.fillStyle = '#fff';
+      tx.fillText(WORD, x - off, y);
+      tx.restore();
+    };
+    glow(fs * .06, 'rgb(0,255,0)');
+    glow(fs * .06, 'rgb(0,255,0)');
+    glow(fs * .26, 'rgb(0,0,255)');
+    glow(fs * .26, 'rgb(0,0,255)');
+    tx.fillStyle = 'rgb(255,0,0)';
+    tx.fillText(WORD, x, y);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, tc);
+  }
+
+  let W = 0, H = 0;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = innerWidth, ch = innerHeight;
+    let scale = dpr;
+    const maxPx = 1.8e6;
+    if (cw * ch * scale * scale > maxPx) scale = Math.sqrt(maxPx / (cw * ch));
+    W = Math.max(1, Math.round(cw * scale));
+    H = Math.max(1, Math.round(ch * scale));
+    canvas.width = W; canvas.height = H;
+    gl.viewport(0, 0, W, H);
+    drawWord(W, H);
+  }
+  resize();
+  let resizeTimer = 0;
+  addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 120); });
+  setupTypes();
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load(type.css.replace('{size}', 120), WORD).then(() => resize()).catch(() => {});
+  }
+
+  // Pointer: the glass bulges where you are; a tap makes it chirp from there.
+  const mouse = { x: 0, y: 0, tx: 0, ty: 0, on: 0, target: 0 };
+  // The tail: each point follows the one before it, so particles stream behind the pointer.
+  const trail = new Float32Array(16);
+  let idleTimer = 0;
+  const toP = e => [(e.clientX / innerWidth - .5) * (innerWidth / innerHeight), .5 - e.clientY / innerHeight];
+  addEventListener('pointermove', e => {
+    [mouse.tx, mouse.ty] = toP(e);
+    mouse.target = 1;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { mouse.target = 0; }, 2400);
+  });
+  const wave = { x: 0, y: 0, tap: -1 };
+  canvas.addEventListener('pointerdown', e => {
+    [wave.x, wave.y] = toP(e);
+    [mouse.tx, mouse.ty] = [wave.x, wave.y];
+    mouse.target = 1;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { mouse.target = 0; }, 2400);
+    phase = Math.floor(phase) + 1;
+    wave.tap = Math.floor(phase);
+  });
+
+  // The chirp: three quick pulses, a little faster when the night is warm.
+  let phase = 0, t = 0, last = performance.now(), lastIdx = 0, chirp = 0, N = 54, shownAt = 0;
+  const rateEl = document.getElementById('rate'), tempEl = document.getElementById('temp');
+
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000);
+    last = now;
+    const speed = reduce ? .25 : 1;
+    t += dt * speed;
+    const loop = (t / 48) % 1 * Math.PI * 2;
+    N = 54 + 10 * Math.sin(loop);
+    phase += dt * speed * N / 60;
+    const idx = Math.floor(phase);
+    if (idx !== lastIdx) {
+      lastIdx = idx;
+      if (idx !== wave.tap) { wave.x = 0; wave.y = 0; }
+      sound.chirp();
+    }
+    const since = (phase - idx) * 60 / N;
+    let env = .35 * Math.exp(-since * 2.5);
+    for (let k = 0; k < 3; k++) { const d = (since - k * .085) / .03; env += Math.exp(-d * d); }
+    if (reduce) env *= .4;
+    chirp += (env - chirp) * Math.min(1, dt * 18);
+
+    // Switching looks dips to black and comes back up.
+    if (look.next >= 0) {
+      look.fade = Math.max(0, look.fade - dt * 4);
+      if (look.fade === 0) {
+        look.mode = look.next; look.next = -1;
+        document.documentElement.classList.toggle('tone-light', LOOKS[look.mode] === 'frost');
+      }
+    } else look.fade = Math.min(1, look.fade + dt * 1.6);
+
+    mouse.x += (mouse.tx - mouse.x) * Math.min(1, dt * 6);
+    mouse.y += (mouse.ty - mouse.y) * Math.min(1, dt * 6);
+    mouse.on += (mouse.target - mouse.on) * Math.min(1, dt * 3);
+    trail[0] = mouse.tx; trail[1] = mouse.ty;
+    for (let i = 2; i < 16; i += 2) {
+      const k = Math.min(1, dt * 14);
+      trail[i] += (trail[i - 2] - trail[i]) * k;
+      trail[i + 1] += (trail[i - 1] - trail[i + 1]) * k;
+    }
+
+    gl.uniform2f(U.uRes, W, H);
+    gl.uniform1f(U.uTime, t);
+    gl.uniform1f(U.uChirp, chirp);
+    gl.uniform1f(U.uSince, since);
+    gl.uniform1f(U.uLoop, loop);
+    gl.uniform1f(U.uMouseOn, mouse.on);
+    gl.uniform1f(U.uBoil, reduce ? 0 : 1);
+    gl.uniform2f(U.uMouse, mouse.x, mouse.y);
+    gl.uniform2fv(U.uTrail, trail);
+    gl.uniform2f(U.uWave, wave.x, wave.y);
+    gl.uniform1f(U.uMode, look.mode);
+    gl.uniform1f(U.uFade, look.fade * look.fade * (3 - 2 * look.fade));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    if (now - shownAt > 700) {
+      shownAt = now;
+      rateEl.textContent = `${Math.round(N)} chirps / min`;
+      tempEl.textContent = `≈ ${(10 + (N - 40) / 7).toFixed(1)} °C by Dolbear’s law`;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  function setupTypes() {
+    const buttons = [...document.querySelectorAll('#types button')];
+    const show = () => buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.type === type.id)));
+    buttons.forEach(b => b.addEventListener('click', () => {
+      type = TYPES.find(x => x.id === b.dataset.type) || type;
+      show();
+      const draw = () => drawWord(W, H);
+      if (document.fonts && document.fonts.load) document.fonts.load(type.css.replace('{size}', 120), WORD).then(draw, draw);
+      else draw();
+    }));
+    show();
+  }
+
+  function setupLooks() {
+    const buttons = [...document.querySelectorAll('#looks button')];
+    const show = name => buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.look === name)));
+    const pick = (name, instant) => {
+      const i = LOOKS.indexOf(name);
+      if (i < 0) return;
+      show(name);
+      if (instant) { look.mode = i; look.next = -1; document.documentElement.classList.toggle('tone-light', name === 'frost'); }
+      else if (i !== look.mode || look.next >= 0) look.next = i;
+    };
+    buttons.forEach(b => b.addEventListener('click', () => {
+      pick(b.dataset.look);
+      try { history.replaceState(null, '', '#' + b.dataset.look); } catch (e) {}
+    }));
+    pick('glass', true);
+  }
+
+  function setupLink() {
+    const cta = document.getElementById('cta');
+    if (TINY_CROWNS_URL && TINY_CROWNS_URL !== '#') { cta.href = TINY_CROWNS_URL; return; }
+    let timer = 0;
+    cta.addEventListener('click', e => {
+      e.preventDefault();
+      cta.classList.add('is-soon');
+      clearTimeout(timer);
+      timer = setTimeout(() => cta.classList.remove('is-soon'), 1800);
+    });
+  }
+
+  // A synthesised cricket, only after the visitor asks for it.
+  function setupSound() {
+    // Sound is on by default. Browsers only allow audio after the visitor interacts with the page, so the cricket
+    // starts with the first click, tap or key press anywhere; the button turns it off and on again.
+    const btn = document.getElementById('sound'), label = document.getElementById('sound-label');
+    let ac = null, master = null, on = true;
+    const wake = () => {
+      try {
+        if (!ac) {
+          ac = new (window.AudioContext || window.webkitAudioContext)();
+          master = ac.createGain();
+          master.gain.value = .045;
+          const lp = ac.createBiquadFilter();
+          lp.type = 'lowpass'; lp.frequency.value = 6000;
+          master.connect(lp).connect(ac.destination);
+        }
+        if (on) ac.resume(); else ac.suspend();
+      } catch (err) { on = false; }
+    };
+    // A tap anywhere on the page (not on a link or button) switches the sound: the first one starts it, each
+    // further one turns it off or on again. The button does the same.
+    let started = false;
+    const setOn = v => {
+      on = v;
+      if (!started) { started = true; btn.classList.remove('waiting'); }
+      wake();
+      btn.setAttribute('aria-pressed', String(on));
+      label.textContent = on ? 'Sound on' : 'Sound off';
+    };
+    addEventListener('pointerdown', e => {
+      if (e.target.closest && e.target.closest('a, button')) return;
+      setOn(started ? !on : true);
+    }, true);
+    addEventListener('keydown', () => { if (!started) setOn(true); }, true);
+    // The button simply flips the state it shows, so "Sound on" clicked before anything else means off.
+    btn.addEventListener('click', () => setOn(!on));
+    return {
+      chirp() {
+        if (!on || !ac || ac.state !== 'running') return;
+        const t0 = ac.currentTime + .01;
+        const pitch = 4200 + Math.random() * 120;
+        for (let k = 0; k < 3; k++) {
+          const s = t0 + k * .085;
+          const o = ac.createOscillator(), g = ac.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(pitch, s);
+          o.frequency.linearRampToValueAtTime(pitch * .97, s + .05);
+          g.gain.setValueAtTime(0, s);
+          g.gain.linearRampToValueAtTime(1, s + .008);
+          g.gain.exponentialRampToValueAtTime(.001, s + .055);
+          o.connect(g).connect(master);
+          o.start(s);
+          o.stop(s + .07);
+        }
+      }
+    };
+  }
+})();
+</script>
+</body>
+</html>
