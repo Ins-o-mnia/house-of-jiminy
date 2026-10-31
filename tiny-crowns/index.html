@@ -29,7 +29,7 @@ p { margin: 0; min-height: 1.5em; font-size: 15px; color: #8a4a2e; }
 </form>
 <script>
 (function () {
-  var salt = Uint8Array.from(atob("BI1A+4jz5ZGh91AW8L20iw=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-BI1A+4jz";
+  var salt = Uint8Array.from(atob("oVt0/F/cjW5QlZAetyIIyQ=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-oVt0/F/c";
   function derive(pw) {
     return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (k) {
       return crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 310000, hash: "SHA-256" }, k,
