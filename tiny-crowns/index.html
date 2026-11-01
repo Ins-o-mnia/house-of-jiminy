@@ -8,6 +8,7 @@
 <style>
 :root { color-scheme: light; --ink: #241d19; --terra: rgb(164, 88, 52); --line: #e3d8c8; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #fbf7f0; color: var(--ink);
   font: 17px/1.5 Georgia, "Times New Roman", serif; padding: 24px max(16px, env(safe-area-inset-left, 0px)); }
 form { width: min(340px, 100%); display: flex; flex-direction: column; gap: 12px; text-align: center; }
@@ -18,6 +19,7 @@ input { background: #fff; color: var(--ink); }
 button { background: var(--terra); color: #fbf1e2; border-color: var(--terra); cursor: pointer; }
 button[disabled] { opacity: .6; }
 p { margin: 0; min-height: 1.5em; font-size: 15px; color: #8a4a2e; }
+#w { max-width: 340px; text-align: center; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -27,9 +29,10 @@ p { margin: 0; min-height: 1.5em; font-size: 15px; color: #8a4a2e; }
   <button id="b">Öffnen</button>
   <p id="m" role="status"></p>
 </form>
+<p id="w" role="status" hidden>Diese Vorschau ist auf diesem Gerät schon freigeschaltet. Sie öffnet sich gleich …</p>
 <script>
 (function () {
-  var salt = Uint8Array.from(atob("/FyE/A1Et0y1rqgTkgMcMg=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-/FyE/A1E";
+  var salt = Uint8Array.from(atob("4/uGGQrnD8lyCv2zBiFs4g=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-4/uGGQrn";
   function derive(pw) {
     return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (k) {
       return crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 310000, hash: "SHA-256" }, k,
@@ -49,9 +52,16 @@ p { margin: 0; min-height: 1.5em; font-size: 15px; color: #8a4a2e; }
       return crypto.subtle.importKey("raw", Uint8Array.from(atob(raw), function (c) { return c.charCodeAt(0); }), "AES-GCM", true, ["decrypt"]);
     } catch (e) { return null; }
   }
-  var r = remembered();
-  if (r) r.then(enter).catch(function () { try { localStorage.removeItem(REMEMBER); } catch (e) {} });
-  document.getElementById("f").addEventListener("submit", function (e) {
+  // Opened here before: no password asked again. Hide the form meanwhile, so nobody types one that is not checked.
+  var r = remembered(), form = document.getElementById("f"), wait = document.getElementById("w");
+  if (r) {
+    form.hidden = true; wait.hidden = false;
+    r.then(enter).catch(function () {
+      try { localStorage.removeItem(REMEMBER); } catch (e) {}
+      form.hidden = false; wait.hidden = true;
+    });
+  }
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
     var b = document.getElementById("b"), m = document.getElementById("m");
     b.disabled = true; m.textContent = "";
