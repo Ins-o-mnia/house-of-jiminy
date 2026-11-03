@@ -177,7 +177,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <p class="tagline">Small worlds, made with a good conscience.</p>
       <a class="cta" id="cta" href="#" target="_blank" rel="noopener">
         <span class="kicker">First project</span>
-        <span class="name">Tiny Crowns</span>
+        <span class="name">Tiny Dynasties</span>
         <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 18.5 18.5 5.5M9 5.5h9.5V15" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span class="kicker soon">Soon</span>
       </a>
@@ -193,8 +193,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 
 <script>
 (() => {
-  // Where the button leads: the Tiny Crowns preview behind a password (until it has an Impressum).
-  const TINY_CROWNS_URL = '/tiny-crowns/';
+  // Where the button leads: the Tiny Dynasties preview behind a password (until it has an Impressum).
+  const TINY_DYNASTIES_URL = '/tiny-dynasties/';
   const WORD = 'JIMINY';
   // Faces for the word, to try side by side. The first one opens.
   const TYPES = [
@@ -765,7 +765,7 @@ void main(){
 
   function setupLink() {
     const cta = document.getElementById('cta');
-    if (TINY_CROWNS_URL && TINY_CROWNS_URL !== '#') { cta.href = TINY_CROWNS_URL; return; }
+    if (TINY_DYNASTIES_URL && TINY_DYNASTIES_URL !== '#') { cta.href = TINY_DYNASTIES_URL; return; }
     let timer = 0;
     cta.addEventListener('click', e => {
       e.preventDefault();
