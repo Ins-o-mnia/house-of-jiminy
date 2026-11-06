@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Studio Jiminy</title>
-<meta name="description" content="Studio Jiminy: small worlds, warm enough to chirp.">
+<meta name="description" content="Studio Jiminy: small worlds, with a song in them.">
 <link rel="preload" href="/fonts/fraunces-italic-900-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/fonts.css">
 <style>
@@ -86,7 +86,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sound[aria-pressed="true"] .bars i:nth-child(2) { animation-delay: .12s; }
 .sound[aria-pressed="true"] .bars i:nth-child(3) { animation-delay: .24s; }
 @keyframes bar { from { height: 3px; } to { height: 10px; } }
-/* Until the first click the button breathes in the cricket's rhythm and a small hint says how to hear it. */
+/* Until the first click the button breathes softly and a small hint says how to hear it. */
 .sound { position: relative; }
 .sound .hint {
   position: absolute; top: calc(100% + 10px); right: 2px; white-space: nowrap;
@@ -94,8 +94,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   opacity: 0; transition: opacity .6s; pointer-events: none;
 }
 .sound.waiting .hint { opacity: 1; transition-delay: 1.2s; }
-.sound.waiting { animation: wait-chirp 1.25s ease-in-out infinite; }
-@keyframes wait-chirp {
+.sound.waiting { animation: wait-song 1.25s ease-in-out infinite; }
+@keyframes wait-song {
   0%, 30%, 100% { border-color: var(--glass-line); box-shadow: 0 0 0 0 rgba(246, 239, 233, 0); }
   8%, 22% { border-color: rgba(246, 239, 233, .7); box-shadow: 0 0 18px 0 rgba(246, 239, 233, .18); }
 }
@@ -173,7 +173,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   </div>
   <div class="row bottom">
     <div class="lede">
-      <p class="tagline">Small worlds, warm enough to chirp.</p>
+      <p class="tagline">Small worlds, with a song in them.</p>
       <a class="cta" id="cta" href="#" target="_blank" rel="noopener">
         <span class="kicker">First project</span>
         <span class="name">Tiny Dynasties</span>
@@ -183,8 +183,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     </div>
     <div class="side">
     <div class="label readout" aria-live="off">
-      <span id="rate">54 chirps / min</span><br>
-      <span id="temp">≈ 12.0 °C by Dolbear’s law</span>
+      <span id="songs">listening</span><br>
+      <span>a robin, first light</span>
     </div>
     </div>
   </div>
@@ -403,7 +403,7 @@ vec3 drift(vec2 p, float asp, float t, float L, out vec2 refr){
   return max(col,0.)*(1.+.08*(s1*m1+s2*m2));
 }
 
-// 3 Rings: every chirp leaves a ring of sound in fine concentric grooves.
+// 3 Rings: every song leaves a ring of sound in fine concentric grooves.
 vec3 rings(vec2 p, float asp, float t, float L, out vec2 refr){
   vec2 c=ringCenter(t,L);
   vec2 d=(p-c)*vec2(.82,1.);
@@ -466,7 +466,7 @@ void main(){
 
   float warm=.5+.5*sin(L+p.y*2.2-p.x*.6);
   vec3 glowCol=mix(vec3(.25,.45,1.), vec3(1.,.42,.2), warm);
-  // A soft dark aura keeps the white letters readable on the bright parts; each chirp lights it up.
+  // A soft dark aura keeps the white letters readable on the bright parts; each song lights it up.
   col*=1.-mix(.38,.5,glassy)*halo.g*(1.-fr);
   col+=glowCol*halo.g*mix(.3,.6,glassy)*uChirp*(1.-fr);
   col+=mix(vec3(.35,.2,.85), vec3(1.,.5,.35), warm)*halo.b*mix(.12+.2*uChirp,.3+.4*uChirp,glassy)*(1.-fr);
@@ -643,7 +643,7 @@ void main(){
     document.fonts.load(type.css.replace('{size}', 120), WORD).then(() => resize()).catch(() => {});
   }
 
-  // Pointer: the glass bulges where you are; a tap makes it chirp from there.
+  // Pointer: the glass bulges where you are; a tap makes the robin sing from there.
   const mouse = { x: 0, y: 0, tx: 0, ty: 0, on: 0, target: 0 };
   // The tail: each point follows the one before it, so particles stream behind the pointer.
   const trail = new Float32Array(16);
@@ -662,13 +662,21 @@ void main(){
     mouse.target = 1;
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { mouse.target = 0; }, 2400);
-    phase = Math.floor(phase) + 1;
-    wave.tap = Math.floor(phase);
+    // Not on top of a phrase still sounding.
+    if (t - songAt > 2.5) { wave.tap = 1; nextSong = t; }
   });
 
-  // The chirp: three quick pulses, a little faster when the night is warm.
-  let phase = 0, t = 0, last = performance.now(), lastIdx = 0, chirp = 0, N = 54, shownAt = 0;
-  const rateEl = document.getElementById('rate'), tempEl = document.getElementById('temp');
+  // The song: now and then a robin sings a short phrase; each note lights the glass a little.
+  let t = 0, last = performance.now(), chirp = 0, shownAt = 0, songs = 0;
+  let songAt = -100, nextSong = 3 + Math.random() * 3, notes = [];
+  const songsEl = document.getElementById('songs');
+  const sing = () => {
+    notes = robinPhrase();
+    songAt = t;
+    songs++;
+    nextSong = t + 8 + Math.random() * 12;
+    sound.sing(notes);
+  };
 
   function frame(now) {
     const dt = Math.min(.05, (now - last) / 1000);
@@ -676,17 +684,14 @@ void main(){
     const speed = reduce ? .25 : 1;
     t += dt * speed;
     const loop = (t / 48) % 1 * Math.PI * 2;
-    N = 54 + 10 * Math.sin(loop);
-    phase += dt * speed * N / 60;
-    const idx = Math.floor(phase);
-    if (idx !== lastIdx) {
-      lastIdx = idx;
-      if (idx !== wave.tap) { wave.x = 0; wave.y = 0; }
-      sound.chirp();
+    if (t >= nextSong) {
+      if (wave.tap < 0) { wave.x = 0; wave.y = 0; }
+      wave.tap = -1;
+      sing();
     }
-    const since = (phase - idx) * 60 / N;
-    let env = .35 * Math.exp(-since * 2.5);
-    for (let k = 0; k < 3; k++) { const d = (since - k * .085) / .03; env += Math.exp(-d * d); }
+    const since = t - songAt;
+    let env = .3 * Math.exp(-since * 1.2);
+    for (const n of notes) { const d = (since - n.at - n.dur * .5) / Math.max(.03, n.dur * .6); env += .7 * Math.exp(-d * d); }
     if (reduce) env *= .4;
     chirp += (env - chirp) * Math.min(1, dt * 18);
 
@@ -725,8 +730,7 @@ void main(){
 
     if (now - shownAt > 700) {
       shownAt = now;
-      rateEl.textContent = `${Math.round(N)} chirps / min`;
-      tempEl.textContent = `≈ ${(10 + (N - 40) / 7).toFixed(1)} °C by Dolbear’s law`;
+      songsEl.textContent = songs ? `${songs} ${songs === 1 ? 'song' : 'songs'} so far` : 'listening';
     }
     requestAnimationFrame(frame);
   }
@@ -774,9 +778,37 @@ void main(){
     });
   }
 
-  // A synthesised cricket, only after the visitor asks for it.
+  // A robin's phrase, made up fresh each time: a clear whistle or two, a pearly trill that falls, a short warble.
+  // Each note: start (s), length (s), pitch at start and end (Hz).
+  function robinPhrase() {
+    const r = (a, b) => a + Math.random() * (b - a);
+    const out = [];
+    let at = 0;
+    for (let i = 0, n = 1 + Math.floor(r(0, 2)); i < n; i++) {
+      const f = r(3800, 6800), dur = r(.1, .26);
+      out.push({ at, dur, f0: f, f1: f * r(.85, 1.15) });
+      at += dur + r(.06, .14);
+    }
+    let f = r(6200, 7800);
+    const fall = r(.9, .96);
+    for (let i = 0, n = 5 + Math.floor(r(0, 6)); i < n; i++) {
+      const dur = r(.028, .045);
+      out.push({ at, dur, f0: f * 1.12, f1: f * .88 });
+      at += dur + r(.018, .03);
+      f = Math.max(3200, f * fall);
+    }
+    at += r(.05, .12);
+    for (let i = 0, n = Math.floor(r(1, 4)); i < n; i++) {
+      const f = r(2200, 5200), dur = r(.06, .16);
+      out.push({ at, dur, f0: f, f1: f * r(.75, 1.3), wob: r(20, 40) });
+      at += dur + r(.04, .08);
+    }
+    return out;
+  }
+
+  // The robin's voice, synthesised, only after the visitor asks for it.
   function setupSound() {
-    // Sound is on by default. Browsers only allow audio after the visitor interacts with the page, so the cricket
+    // Sound is on by default. Browsers only allow audio after the visitor interacts with the page, so the robin
     // starts with the first click, tap or key press anywhere; the button turns it off and on again.
     const btn = document.getElementById('sound'), label = document.getElementById('sound-label');
     let ac = null, master = null, on = true;
@@ -787,7 +819,7 @@ void main(){
           master = ac.createGain();
           master.gain.value = .045;
           const lp = ac.createBiquadFilter();
-          lp.type = 'lowpass'; lp.frequency.value = 6000;
+          lp.type = 'lowpass'; lp.frequency.value = 9000;
           master.connect(lp).connect(ac.destination);
         }
         if (on) ac.resume(); else ac.suspend();
@@ -811,22 +843,28 @@ void main(){
     // The button simply flips the state it shows, so "Sound on" clicked before anything else means off.
     btn.addEventListener('click', () => setOn(!on));
     return {
-      chirp() {
+      sing(phrase) {
         if (!on || !ac || ac.state !== 'running') return;
-        const t0 = ac.currentTime + .01;
-        const pitch = 4200 + Math.random() * 120;
-        for (let k = 0; k < 3; k++) {
-          const s = t0 + k * .085;
+        const t0 = ac.currentTime + .02;
+        for (const n of phrase) {
+          const s = t0 + n.at, e = s + n.dur;
           const o = ac.createOscillator(), g = ac.createGain();
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(pitch, s);
-          o.frequency.linearRampToValueAtTime(pitch * .97, s + .05);
+          o.type = 'sine';
+          o.frequency.setValueAtTime(n.f0, s);
+          o.frequency.exponentialRampToValueAtTime(n.f1, e);
+          if (n.wob) {
+            const lfo = ac.createOscillator(), depth = ac.createGain();
+            lfo.frequency.value = n.wob; depth.gain.value = n.f0 * .04;
+            lfo.connect(depth).connect(o.frequency);
+            lfo.start(s); lfo.stop(e + .02);
+          }
           g.gain.setValueAtTime(0, s);
-          g.gain.linearRampToValueAtTime(1, s + .008);
-          g.gain.exponentialRampToValueAtTime(.001, s + .055);
+          g.gain.linearRampToValueAtTime(.7, s + Math.min(.012, n.dur * .3));
+          g.gain.setValueAtTime(.7, Math.max(s + .012, e - n.dur * .4));
+          g.gain.exponentialRampToValueAtTime(.001, e);
           o.connect(g).connect(master);
           o.start(s);
-          o.stop(s + .07);
+          o.stop(e + .02);
         }
       }
     };
