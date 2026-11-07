@@ -32,7 +32,7 @@ p { margin: 0; min-height: 1.5em; font-size: 15px; color: #8a4a2e; }
 <p id="w" role="status" hidden>Diese Vorschau ist auf diesem Gerät schon freigeschaltet. Sie öffnet sich gleich …</p>
 <script>
 (function () {
-  var salt = Uint8Array.from(atob("C/xCf7ujS7bwL0jhoLUR5A=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-C/xCf7uj";
+  var salt = Uint8Array.from(atob("KMR2qbHfieJyvoPxU8DvCQ=="), function (c) { return c.charCodeAt(0); }), REMEMBER = "tc-preview-KMR2qbHf";
   function derive(pw) {
     return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (k) {
       return crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 310000, hash: "SHA-256" }, k,
