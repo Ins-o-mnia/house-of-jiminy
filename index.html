@@ -666,7 +666,8 @@ void main(){
     if (t - songAt > 2.5) { wave.tap = 1; nextSong = t; }
   });
 
-  // The song: now and then a robin sings a short phrase; each note lights the glass a little.
+  // The song: the robin sings almost all the time, phrase after phrase with only short breaths between (Paul,
+  // 2026-11-09); each note lights the glass a little.
   let t = 0, last = performance.now(), chirp = 0, shownAt = 0, songs = 0;
   let songAt = -100, nextSong = 3 + Math.random() * 3, notes = [];
   const songsEl = document.getElementById('songs');
@@ -674,7 +675,8 @@ void main(){
     notes = robinPhrase();
     songAt = t;
     songs++;
-    nextSong = t + 8 + Math.random() * 12;
+    const length = notes.reduce((m, n) => Math.max(m, n.at + n.dur), 0);
+    nextSong = t + length + .35 + Math.random() * .9;
     sound.sing(notes);
   };
 
