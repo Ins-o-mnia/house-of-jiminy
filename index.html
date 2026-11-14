@@ -122,6 +122,10 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .cta.is-soon .soon { display: inline; }
 .cta.is-soon .arrow { display: none; }
 
+.legal { text-align: right; }
+.legal a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--glass-line); text-underline-offset: 3px; }
+.legal a:hover, .legal a:focus-visible { text-decoration-color: currentColor; }
+@media (max-width: 560px) { .legal { text-align: left; } }
 .readout { text-align: right; font-variant-numeric: tabular-nums; }
 :focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
 
@@ -186,6 +190,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <span id="songs">listening</span><br>
       <span>a robin, first light</span>
     </div>
+    <nav class="label legal" aria-label="Legal"><a href="/impressum.html">Impressum</a> · <a href="/datenschutz.html">Datenschutz</a></nav>
     </div>
   </div>
 </main>
